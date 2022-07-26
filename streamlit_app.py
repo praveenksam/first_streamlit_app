@@ -24,6 +24,13 @@ fruits_to_show = my_fruit_list.loc[fruits_selected]
 # Display the table on the page
 streamlit.dataframe(fruits_to_show)
 
+#creating a repeatable function
+def get_fruityvice_data(this_fruit_choice):
+  fruityvice_response = requests.get("https://fruityvice.com/api/fruit/" + fruit_choice)
+  # take the JSON version of the response and normalize it
+  fruityvice_normalized = pandas.json_normalize(fruityvice_response.json())
+  return fruityvice_normalized
+
 # New Section to display fruityvice api response
 streamlit.header('Fruityvice Fruit Advice!')
 try:
@@ -31,31 +38,30 @@ try:
   if not fruit_choice:
     streamlit.error("Please select a fruit to get information.")
   else:
-    fruityvice_response = requests.get("https://fruityvice.com/api/fruit/" + fruit_choice)
-    # take the JSON version of the response and normalize it
-    fruityvice_normalized = pandas.json_normalize(fruityvice_response.json())
+    back_from_function = get_fruityvice_data(fruit_choice)
     # Output it to the screen as a table
-    streamlit.dataframe(fruityvice_normalized)
-
+    streamlit.dataframe(back_from_function)
 except URLError as e:
   streamlit.error()
-    
+
+streamlit.header("The fruit load list contains:")
+# Snowflake-related functions
+def get_fruit_load_list():
+  with my_cnx.cursor() as my_cur:
+    my_cur.execute("select * from fruit_load_list")
+    return my_cur.fetchall()
+  
+# Add a button to load the fruit
+if streamlit.button('Get Fruit Load List'):
+  my_cnx = snowflake.connector.connect(**streamlit.secrets["snowflake"])
+  my_data_rows = get_fruit_load_list()
+  streamlit.dataframe(my_data_rows)
+
 # streamlit.write('The user entered', fruit_choice)
-
-
 # streamlit.text(fruityvice_response.json())
-
-
 
 # For testing: do not run code beyond here
 # streamlit.stop()
-
-my_cnx = snowflake.connector.connect(**streamlit.secrets["snowflake"])
-my_cur = my_cnx.cursor()
-my_cur.execute("SELECT * FROM FRUIT_LOAD_LIST")
-my_data_rows = my_cur.fetchall()
-streamlit.header("The fruit load list contains:")
-streamlit.dataframe(my_data_rows)
 
 # New input to ask which fruit
 add_my_fruit = streamlit.text_input('What fruit would you like to add?', 'jackfruit')
